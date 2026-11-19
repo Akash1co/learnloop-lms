@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test \"tests/**/*.test.js\"",
+    "lint": "node --check server/index.js && node --check server/migrate.js"
   },
   "keywords": [],
   "author": "",
