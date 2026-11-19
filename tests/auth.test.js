@@ -21,8 +21,8 @@ test.after(() => new Promise((resolve) => server.close(resolve)));
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
-    headers: { 'content-type': 'application/json', ...(options.headers || {}) },
     ...options,
+    headers: { 'content-type': 'application/json', ...(options.headers || {}) },
   });
   return { response, body: await response.json() };
 }
@@ -79,7 +79,10 @@ test('enforces course RBAC and permits instructors', async () => {
   const created = await request('/api/v1/courses', {
     method: 'POST',
     headers: { authorization: `Bearer ${instructor.body.token}` },
-    body: JSON.stringify({ title: 'Node.js Foundations' }),
+    body: JSON.stringify({
+      title: 'Node.js Foundations',
+      description: 'A practical introduction to building Node.js applications.',
+    }),
   });
   assert.equal(created.response.status, 201);
   const listed = await request('/api/v1/courses', {
