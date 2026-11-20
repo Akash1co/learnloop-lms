@@ -1,0 +1,170 @@
+{
+  "info": {
+    "_postman_id": "66e3a978-ccad-4832-8437-0e654ec5ad70",
+    "name": "LearnLoop LMS",
+    "description": "Complete sandbox journey: register instructor and student, create a paid course and curriculum, complete sandbox payment, submit work, grade it, and inspect the student dashboard. Configure the local PAYMENT_SECRET to match paymentSecret before using sandbox payment verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "instructorToken", "value": "", "type": "string" },
+    { "key": "courseId", "value": "", "type": "string" },
+    { "key": "moduleId", "value": "", "type": "string" },
+    { "key": "lessonId", "value": "", "type": "string" },
+    { "key": "orderId", "value": "", "type": "string" },
+    { "key": "paymentId", "value": "", "type": "string" },
+    { "key": "signature", "value": "", "type": "string" },
+    { "key": "assetUrl", "value": "", "type": "string" },
+    { "key": "submissionId", "value": "", "type": "string" },
+    { "key": "paymentSecret", "value": "replace-with-a-payment-signing-secret", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. Register instructor",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"LearnLoop Instructor\",\n  \"email\": \"instructor-{{$timestamp}}@example.test\",\n  \"password\": \"secure-password-123\",\n  \"role\": \"instructor\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('instructorToken', pm.response.json().token);"] } }]
+    },
+    {
+      "name": "2. Register student",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"LearnLoop Student\",\n  \"email\": \"student-{{$timestamp}}@example.test\",\n  \"password\": \"secure-password-123\",\n  \"role\": \"student\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/auth/register"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+    },
+    {
+      "name": "3. Create paid course",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{instructorToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Production Ready Node.js\",\n  \"description\": \"A complete LearnLoop journey\",\n  \"price\": 19.99\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/courses"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('courseId', pm.response.json().course.id);"] } }]
+    },
+    {
+      "name": "4. Add course module",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{instructorToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Week 1: Getting Started\",\n  \"position\": 0\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/modules"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('moduleId', pm.response.json().module.id);"] } }]
+    },
+    {
+      "name": "5. Add lesson",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{instructorToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"Build and submit a small app\",\n  \"content\": \"Create a small Node.js app and submit your work.\",\n  \"position\": 0\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/modules/{{moduleId}}/lessons"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('lessonId', pm.response.json().lesson.id);"] } }]
+    },
+    {
+      "name": "6. Create sandbox checkout",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"courseId\": \"{{courseId}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/integrations/payments/checkout"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) {", "  const result = pm.response.json();", "  const orderId = result.order.provider_order_id;", "  const paymentId = result.checkout.paymentId;", "  const secret = pm.collectionVariables.get('paymentSecret');", "  pm.collectionVariables.set('orderId', orderId);", "  pm.collectionVariables.set('paymentId', paymentId);", "  pm.collectionVariables.set('signature', CryptoJS.HmacSHA256(`${orderId}|${paymentId}`, secret).toString());", "}"] } }]
+    },
+    {
+      "name": "7. Verify sandbox payment and enroll",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"paymentId\": \"{{paymentId}}\",\n  \"signature\": \"{{signature}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/integrations/payments/verify"
+      }
+    },
+    {
+      "name": "8. Mark lesson complete",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/v1/lessons/{{lessonId}}/complete"
+      }
+    },
+    {
+      "name": "9. Upload a small PNG work sample",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"data\": \"data:image/png;base64,iVBORw0KGgo=\",\n  \"mimeType\": \"image/png\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/integrations/uploads"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('assetUrl', pm.response.json().asset.url);"] } }]
+    },
+    {
+      "name": "10. Submit lesson work",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"content\": \"My completed project work.\",\n  \"fileUrl\": \"{{assetUrl}}\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/lessons/{{lessonId}}/submit"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('submissionId', pm.response.json().submission.id);"] } }]
+    },
+    {
+      "name": "11. Grade submission",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{instructorToken}}", "type": "string" }] },
+        "body": { "mode": "raw", "raw": "{\n  \"grade\": 95,\n  \"feedback\": \"Excellent work.\"\n}", "options": { "raw": { "language": "json" } } },
+        "url": "{{baseUrl}}/api/v1/submissions/{{submissionId}}/grade"
+      }
+    },
+    {
+      "name": "12. View student dashboard",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/v1/dashboard"
+      }
+    },
+    {
+      "name": "13. List courses",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/v1/courses"
+      }
+    },
+    {
+      "name": "14. Log out student",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] },
+        "url": "{{baseUrl}}/api/v1/auth/logout"
+      }
+    }
+  ]
+}

@@ -7,17 +7,18 @@ const { sendWelcomeEmail } = require('../services/emailService');
 const {
   authenticate, issueToken, revokeToken,
 } = require('../middleware/auth');
+const { validateString } = require('../middleware/security');
 
 const router = express.Router();
 
 function normalizeEmail(value) {
-  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return (validateString(value, { minLength: 3, maxLength: 254 }) || '').toLowerCase();
 }
 
 function validRegistration(body) {
-  return body && typeof body.name === 'string' && body.name.trim().length >= 2
+  return body && validateString(body.name, { minLength: 2, maxLength: 200 })
     && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(body.email))
-    && typeof body.password === 'string' && body.password.length >= 8;
+    && validateString(body.password, { minLength: 8, maxLength: 1024, trim: false });
 }
 
 router.post('/register', async (req, res, next) => {
@@ -29,8 +30,12 @@ router.post('/register', async (req, res, next) => {
     if (await findUserByEmail(email)) return res.status(409).json({ error: 'Email is already registered' });
     const role = ['student', 'instructor', 'admin'].includes(req.body.role) ? req.body.role : 'student';
     const user = await createUser({
-      name: req.body.name.trim(), email, role,
-      passwordHash: await bcrypt.hash(req.body.password, 12),
+      name: validateString(req.body.name, { minLength: 2, maxLength: 200 }),
+      email, role,
+      passwordHash: await bcrypt.hash(
+        validateString(req.body.password, { minLength: 8, maxLength: 1024, trim: false }),
+        12,
+      ),
     });
     await sendWelcomeEmail(user);
     return res.status(201).json({ token: issueToken(user), user: publicUser(user) });
