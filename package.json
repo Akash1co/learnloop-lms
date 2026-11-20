@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test \"tests/**/*.test.js\"",
+    "test": "node --test tests/auth.test.js tests/integrations.e2e.test.js tests/production.test.js",
     "lint": "node --check server/index.js && node --check server/db.js && node --check server/store.js && node --check server/migrate.js && node --check server/middleware/auth.js && node --check server/middleware/security.js && node --check server/routes/auth.js && node --check server/routes/courses.js && node --check server/routes/modules.js && node --check server/routes/enrollments.js && node --check server/routes/submissions.js && node --check server/routes/integrations.js && node --check server/services/emailService.js && node --check server/services/paymentService.js && node --check server/services/storageService.js && node --check tests/auth.test.js && node --check tests/integrations.e2e.test.js && node --check tests/production.test.js"
   },
   "keywords": [],
