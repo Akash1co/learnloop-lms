@@ -1,0 +1,331 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LearnLoop LMS API",
+    "version": "1.0.0",
+    "description": "REST API for LearnLoop learning, coursework, payments, and reporting. Authenticate with a JWT returned by registration or login."
+  },
+  "servers": [
+    { "url": "/", "description": "Current host" }
+  ],
+  "tags": [
+    { "name": "Health" },
+    { "name": "Authentication" },
+    { "name": "Courses" },
+    { "name": "Modules and lessons" },
+    { "name": "Submissions" },
+    { "name": "Payments and files" },
+    { "name": "Dashboard" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Check service health",
+        "responses": {
+          "200": {
+            "description": "Service is running",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Check versioned API health",
+        "responses": {
+          "200": {
+            "description": "Service is running",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Health" } } }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register an account",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegisterRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Account created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Sign in",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Authenticated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke the current token",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Logged out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Message" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List courses",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Course list", "content": { "application/json": { "schema": { "type": "object", "properties": { "courses": { "type": "array", "items": { "$ref": "#/components/schemas/Course" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a course (instructor or admin)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCourseRequest" } } } },
+        "responses": {
+          "201": { "description": "Course created", "content": { "application/json": { "schema": { "type": "object", "properties": { "course": { "$ref": "#/components/schemas/Course" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/courses/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "tags": ["Courses"],
+        "summary": "Get a course and its curriculum",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Course details", "content": { "application/json": { "schema": { "type": "object", "properties": { "course": { "$ref": "#/components/schemas/Course" } } } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/modules": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "tags": ["Modules and lessons"],
+        "summary": "Add a module to a course",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateModuleRequest" } } } },
+        "responses": {
+          "201": { "description": "Module created", "content": { "application/json": { "schema": { "type": "object", "properties": { "module": { "$ref": "#/components/schemas/Module" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/modules/{id}/lessons": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "tags": ["Modules and lessons"],
+        "summary": "Add a lesson to a module",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateLessonRequest" } } } },
+        "responses": {
+          "201": { "description": "Lesson created", "content": { "application/json": { "schema": { "type": "object", "properties": { "lesson": { "$ref": "#/components/schemas/Lesson" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/courses/{id}/enroll": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Enroll in a free course",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Already enrolled", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnrollmentResponse" } } } },
+          "201": { "description": "Enrollment created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnrollmentResponse" } } } },
+          "402": { "description": "Course requires payment" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/lessons/{id}/complete": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "patch": {
+        "tags": ["Modules and lessons"],
+        "summary": "Mark an enrolled lesson complete",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Lesson completion recorded", "content": { "application/json": { "schema": { "type": "object", "properties": { "lesson_id": { "type": "string" }, "completion_pct": { "type": "number" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/lessons/{id}/submit": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "post": {
+        "tags": ["Submissions"],
+        "summary": "Submit lesson work",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmitWorkRequest" } } } },
+        "responses": {
+          "201": { "description": "Submission created", "content": { "application/json": { "schema": { "type": "object", "properties": { "submission": { "$ref": "#/components/schemas/Submission" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/submissions/{id}": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "get": {
+        "tags": ["Submissions"],
+        "summary": "Get a submission (owner, instructor, or admin)",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Submission details", "content": { "application/json": { "schema": { "type": "object", "properties": { "submission": { "$ref": "#/components/schemas/Submission" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/submissions/{id}/grade": {
+      "parameters": [{ "$ref": "#/components/parameters/Id" }],
+      "patch": {
+        "tags": ["Submissions"],
+        "summary": "Grade a submission (instructor or admin)",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GradeSubmissionRequest" } } } },
+        "responses": {
+          "200": { "description": "Submission graded", "content": { "application/json": { "schema": { "type": "object", "properties": { "submission": { "$ref": "#/components/schemas/Submission" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/integrations/payments/checkout": {
+      "post": {
+        "tags": ["Payments and files"],
+        "summary": "Create a payment order for a paid course",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckoutRequest" } } } },
+        "responses": {
+          "201": { "description": "Payment order created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CheckoutResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/integrations/payments/verify": {
+      "post": {
+        "tags": ["Payments and files"],
+        "summary": "Verify a payment and complete enrollment",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerifyPaymentRequest" } } } },
+        "responses": {
+          "200": { "description": "Payment verified", "content": { "application/json": { "schema": { "type": "object", "properties": { "payment": { "type": "object" }, "enrollment": { "type": "object" } } } } } },
+          "400": { "description": "Invalid payment signature" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/api/v1/integrations/uploads": {
+      "post": {
+        "tags": ["Payments and files"],
+        "summary": "Upload PDF, DOCX, PNG, or JPG work (maximum 10 MB)",
+        "description": "Send multipart/form-data with a `file` field or JSON with base64 `data` and `mimeType`. Instructors/admins may add `public=true`.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": { "schema": { "type": "object", "properties": { "file": { "type": "string", "format": "binary" }, "public": { "type": "boolean" } } } },
+            "application/json": { "schema": { "type": "object", "required": ["data", "mimeType"], "properties": { "data": { "type": "string", "description": "Base64 data or a data URL" }, "mimeType": { "type": "string" }, "public": { "type": "boolean" } } } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Asset stored", "content": { "application/json": { "schema": { "type": "object", "properties": { "asset": { "type": "object", "properties": { "filename": { "type": "string" }, "mimeType": { "type": "string" }, "size": { "type": "integer" }, "url": { "type": "string" } } } } } } } },
+          "413": { "description": "File exceeds upload size limit" },
+          "415": { "description": "Unsupported file type" }
+        }
+      }
+    },
+    "/api/v1/integrations/assets/{filename}": {
+      "get": {
+        "tags": ["Payments and files"],
+        "summary": "Download a private uploaded asset",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [{ "name": "filename", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Asset bytes" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "Get role-specific dashboard analytics",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Dashboard data", "content": { "application/json": { "schema": { "type": "object", "properties": { "dashboard": { "type": "object", "additionalProperties": true } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT", "description": "Use the token returned by registration or login." }
+    },
+    "parameters": {
+      "Id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+    },
+    "responses": {
+      "Unauthorized": { "description": "Authentication required or token invalid", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Forbidden": { "description": "Insufficient permission or enrollment", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "NotFound": { "description": "Resource not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "Conflict": { "description": "Conflicting resource state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "ValidationError": { "description": "Input did not pass validation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "RateLimited": { "description": "Too many requests; retry after the supplied Retry-After interval", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    },
+    "schemas": {
+      "Error": { "type": "object", "required": ["error"], "properties": { "error": { "type": "string" } } },
+      "Message": { "type": "object", "properties": { "message": { "type": "string" } } },
+      "Health": { "type": "object", "required": ["status", "uptime", "environment", "service"], "properties": { "status": { "type": "string", "example": "ok" }, "uptime": { "type": "number" }, "environment": { "type": "string" }, "service": { "type": "string" } } },
+      "RegisterRequest": { "type": "object", "required": ["name", "email", "password"], "properties": { "name": { "type": "string", "minLength": 2, "maxLength": 200 }, "email": { "type": "string", "format": "email" }, "password": { "type": "string", "minLength": 8, "maxLength": 1024 }, "role": { "type": "string", "enum": ["student", "instructor", "admin"], "default": "student" } } },
+      "LoginRequest": { "type": "object", "required": ["email", "password"], "properties": { "email": { "type": "string", "format": "email" }, "password": { "type": "string" } } },
+      "User": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "email": { "type": "string", "format": "email" }, "role": { "type": "string", "enum": ["student", "instructor", "admin"] } } },
+      "AuthResponse": { "type": "object", "required": ["token", "user"], "properties": { "token": { "type": "string" }, "user": { "$ref": "#/components/schemas/User" } } },
+      "Course": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string", "nullable": true }, "instructor_id": { "type": "string" }, "price": { "type": "number" }, "modules": { "type": "array", "items": { "$ref": "#/components/schemas/Module" } } } },
+      "CreateCourseRequest": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string", "minLength": 2, "maxLength": 200 }, "description": { "type": "string" }, "price": { "type": "number", "minimum": 0, "default": 0 } } },
+      "CreateModuleRequest": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string", "minLength": 1 }, "position": { "type": "integer", "minimum": 0, "default": 0 } } },
+      "Module": { "type": "object", "properties": { "id": { "type": "string" }, "course_id": { "type": "string" }, "title": { "type": "string" }, "position": { "type": "integer" }, "lessons": { "type": "array", "items": { "$ref": "#/components/schemas/Lesson" } } } },
+      "CreateLessonRequest": { "type": "object", "required": ["title"], "properties": { "title": { "type": "string" }, "content": { "type": "string" }, "position": { "type": "integer", "minimum": 0, "default": 0 } } },
+      "Lesson": { "type": "object", "properties": { "id": { "type": "string" }, "module_id": { "type": "string" }, "title": { "type": "string" }, "content": { "type": "string", "nullable": true }, "position": { "type": "integer" } } },
+      "EnrollmentResponse": { "type": "object", "properties": { "enrollment": { "type": "object", "additionalProperties": true } } },
+      "SubmitWorkRequest": { "type": "object", "properties": { "content": { "type": "string" }, "fileUrl": { "type": "string" }, "file_url": { "type": "string" } }, "description": "Provide non-empty content, an uploaded asset URL, or both." },
+      "Submission": { "type": "object", "properties": { "id": { "type": "string" }, "user_id": { "type": "string" }, "lesson_id": { "type": "string" }, "content": { "type": "string" }, "file_url": { "type": "string", "nullable": true }, "grade": { "type": "number", "nullable": true }, "feedback": { "type": "string", "nullable": true } } },
+      "GradeSubmissionRequest": { "type": "object", "required": ["grade"], "properties": { "grade": { "type": "number", "minimum": 0, "maximum": 100 }, "feedback": { "type": "string" } } },
+      "CheckoutRequest": { "type": "object", "required": ["courseId"], "properties": { "courseId": { "type": "string" } } },
+      "CheckoutResponse": { "type": "object", "properties": { "order": { "type": "object", "additionalProperties": true }, "checkout": { "type": "object", "additionalProperties": true } } },
+      "VerifyPaymentRequest": { "type": "object", "required": ["orderId", "paymentId", "signature"], "properties": { "orderId": { "type": "string" }, "paymentId": { "type": "string" }, "signature": { "type": "string" } } }
+    }
+  }
+}

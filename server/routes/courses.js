@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticate, authorizeRoles } = require('../middleware/auth');
+const { validateString } = require('../middleware/security');
 const { addModule, createCourse, getCourse, listCourses } = require('../store');
 
 const router = express.Router();
@@ -23,14 +24,15 @@ router.get('/:id', authenticate, authorizeRoles('admin', 'instructor', 'student'
 });
 
 router.post('/', authenticate, authorizeRoles('admin', 'instructor'), async (req, res, next) => {
-  if (!req.body || typeof req.body.title !== 'string' || req.body.title.trim().length < 2) {
+  const title = validateString(req.body && req.body.title, { minLength: 2, maxLength: 200 });
+  if (!title) {
     return res.status(422).json({ error: 'A course title is required' });
   }
   const price = req.body.price === undefined ? 0 : Number(req.body.price);
   if (!Number.isFinite(price) || price < 0) return res.status(422).json({ error: 'Course price must be a non-negative number' });
   try {
     const course = await createCourse({
-      title: req.body.title.trim(), description: req.body.description, instructorId: req.user.sub, price,
+      title, description: req.body.description, instructorId: req.user.sub, price,
     });
     return res.status(201).json({ course });
   } catch (error) {
