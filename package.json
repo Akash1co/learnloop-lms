@@ -1,10 +1,12 @@
 {
   "name": "learnloop-lms",
   "version": "1.0.0",
-  "description": "",
+  "description": "Node.js and Express learning management system API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server/index.js",
+    "test": "node --test \"tests/**/*.test.js\"",
+    "lint": "node --check server/index.js && node --check server/db.js && node --check server/store.js && node --check server/migrate.js && node --check server/middleware/auth.js && node --check server/routes/auth.js && node --check server/routes/courses.js && node --check server/routes/modules.js && node --check server/routes/enrollments.js && node --check server/routes/submissions.js && node --check server/routes/integrations.js && node --check server/services/emailService.js && node --check server/services/paymentService.js && node --check server/services/storageService.js && node --check tests/auth.test.js && node --check tests/integrations.e2e.test.js"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +18,8 @@
     "dotenv": "^18.0.1",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.23.0"
+    "multer": "^2.0.2",
+    "mysql2": "^3.14.4",
+    "nodemailer": "^7.0.7"
   }
 }
