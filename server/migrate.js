@@ -4,7 +4,9 @@ const pool = require('./db');
 
 async function migrate() {
   const sql = fs.readFileSync(path.join(__dirname, '..', 'migrations', '001_init_schema.sql'), 'utf8');
-  await pool.query(sql);
+  for (const statement of sql.split(';').map((part) => part.trim()).filter(Boolean)) {
+    await pool.query(statement);
+  }
   await pool.end();
   console.log('Database migration completed');
 }

@@ -1,51 +1,83 @@
-# LearnLoop LMS - Backend Foundation & Auth
+# LearnLoop LMS API
 
-Node.js and Express backend foundation for the LearnLoop LMS.
+Node.js and Express API for LearnLoop. Live mode uses MySQL; tests use an in-memory
+store and do not require a database or external services.
 
 ## Setup
 
+Requirements: Node.js 20+ and MySQL 8+.
+
 ```bash
 npm ci
-cp .env.example .env
+copy .env.example .env
 ```
 
-Configure PostgreSQL values in `.env` for non-test use. Never commit `.env`.
-
-## Database Migrations
-
-The initial schema is in `migrations/001_init_schema.sql` and defines users, courses,
-course modules, lessons, enrollments, lesson progress, and submissions. Every table
-has primary/foreign keys, `created_at`, `updated_at`, and `deleted_at` columns.
-
-Run the migration with:
+Set the MySQL connection and a private JWT secret in `.env`, create the configured
+database, and apply the schema:
 
 ```bash
 node server/migrate.js
+npm start
 ```
 
-## Auth & Logout API
+Never commit `.env`. The `uploads/` directory stores uploaded assets locally and is
+ignored by git. Production deployments should use persistent storage and TLS.
 
-- `POST /api/v1/auth/register` - register with `name`, `email`, and an 8+ character `password`.
-  Optional roles are `student`, `instructor`, or `admin`; the default is `student`.
-- `POST /api/v1/auth/login` - returns a JWT and public user object.
-- `POST /api/v1/auth/logout` - requires `Authorization: Bearer <token>` and revokes that token.
-- `GET /api/v1/courses` - authenticated student, instructor, or admin access.
-- `POST /api/v1/courses` - authenticated instructor or admin access.
+## Configuration and integrations
 
-Use the returned token as a Bearer token. Revoked or invalid tokens receive `401 Unauthorized`.
+| Variable | Purpose |
+| --- | --- |
+| `PORT` | API port (default `5000`) |
+| `JWT_SECRET`, `JWT_EXPIRES_IN` | Authentication token signing |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | MySQL connection |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_SECURE`, `EMAIL_FROM` | Optional Nodemailer SMTP delivery |
+| `PAYMENT_PROVIDER` | `razorpay` (default) or `stripe` |
+| `PAYMENT_MODE` | Set to `sandbox` to use local signed sandbox orders |
+| `PAYMENT_SECRET` | HMAC secret used to verify checkout signatures |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | Razorpay live order credentials |
+| `STRIPE_SECRET_KEY`, `PAYMENT_WEBHOOK_SECRET` | Stripe live order and verification credentials |
+| `PAYMENT_CURRENCY` | Order currency (defaults to INR for Razorpay and USD for Stripe) |
 
-## Automated Tests
+Emails use an in-memory mock transport when `NODE_ENV=test` or SMTP credentials are
+not configured. Successful sends are recorded by the email service for integration
+tests. In production, configure SMTP credentials to send actual messages.
 
-Tests use Node's built-in test runner and an in-memory repository when `NODE_ENV=test`;
-no database is required:
+Sandbox checkout returns an order and a sandbox `paymentId`. Submit the order ID,
+payment ID, and an HMAC-SHA256 hex signature of `orderId|paymentId` to the verify
+endpoint. Verification is bound to the authenticated user and stored order; a
+successful verification marks the payment paid and creates the enrollment.
+
+Uploads accept multipart field `file` or JSON `{ "data": "<base64-or-data-url>",
+"mimeType": "image/png" }`. Only PDF, DOCX, PNG, and JPG are accepted, with content
+signature checks and a 10 MB limit. Private assets return authenticated URLs;
+instructors and admins can request public URLs with `?public=true`.
+
+## API
+
+All endpoints are under `/api/v1`. Except registration and login, endpoints require
+`Authorization: Bearer <token>`.
+
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`
+- `GET /courses`, `POST /courses`, `GET /courses/:id`
+- `POST /courses/:id/modules`, `POST /modules/:id/lessons`
+- `POST /courses/:id/enroll` (free courses), `PATCH /lessons/:id/complete`
+- `GET /dashboard` (role-specific analytics)
+- `POST /lessons/:id/submit`, `GET /submissions/:id`, `PATCH /submissions/:id/grade`
+- `POST /integrations/payments/checkout`, `POST /integrations/payments/verify`
+- `POST /integrations/uploads`, `GET /integrations/assets/:filename`
+
+Course creation accepts an optional non-negative `price`. Enrolled students can
+complete lessons, submit text and/or an uploaded asset URL, and see their grades.
+Only the course instructor (or an admin) can manage its curriculum or grade work.
+
+## Tests and CI
 
 ```bash
 npm test
+npm run lint
 ```
 
-Syntax checks are available with `npm run lint`.
-
-## CI/CD Pipeline
-
-GitHub Actions runs on every push and pull request. The workflow installs locked
-dependencies with `npm ci`, runs syntax checks, and executes `npm test`.
+The Node native test runner exercises auth, course curriculum, enrollment,
+completion, email notifications, sandbox payments, upload validation, grading, and
+the end-to-end learner journey. GitHub Actions installs from the lockfile, runs
+syntax checks, and executes the suite with `NODE_ENV=test`.

@@ -1,77 +1,103 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id CHAR(36) PRIMARY KEY,
   name VARCHAR(120) NOT NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  role VARCHAR(20) NOT NULL DEFAULT 'student' CHECK (role IN ('admin', 'instructor', 'student')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  role VARCHAR(20) NOT NULL DEFAULT 'student',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL
 );
 
 CREATE TABLE IF NOT EXISTS courses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id CHAR(36) PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   description TEXT,
-  instructor_id UUID REFERENCES users(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  instructor_id CHAR(36),
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_courses_instructor FOREIGN KEY (instructor_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS course_modules (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  course_id UUID NOT NULL REFERENCES courses(id),
+  id CHAR(36) PRIMARY KEY,
+  course_id CHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   position INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_modules_course FOREIGN KEY (course_id) REFERENCES courses(id)
 );
 
 CREATE TABLE IF NOT EXISTS lessons (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  module_id UUID NOT NULL REFERENCES course_modules(id),
+  id CHAR(36) PRIMARY KEY,
+  module_id CHAR(36) NOT NULL,
   title VARCHAR(255) NOT NULL,
   content TEXT,
   position INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_lessons_module FOREIGN KEY (module_id) REFERENCES course_modules(id)
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
-  course_id UUID NOT NULL REFERENCES courses(id),
-  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  UNIQUE (user_id, course_id)
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  course_id CHAR(36) NOT NULL,
+  completion_pct DECIMAL(5, 2) NOT NULL DEFAULT 0,
+  enrolled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  UNIQUE KEY uq_enrollments_user_course (user_id, course_id),
+  CONSTRAINT fk_enrollments_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_enrollments_course FOREIGN KEY (course_id) REFERENCES courses(id)
 );
 
 CREATE TABLE IF NOT EXISTS lesson_progress (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
-  lesson_id UUID NOT NULL REFERENCES lessons(id),
-  completed_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  UNIQUE (user_id, lesson_id)
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  lesson_id CHAR(36) NOT NULL,
+  completed_at TIMESTAMP NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  UNIQUE KEY uq_progress_user_lesson (user_id, lesson_id),
+  CONSTRAINT fk_progress_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_progress_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id)
 );
 
 CREATE TABLE IF NOT EXISTS submissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id),
-  lesson_id UUID NOT NULL REFERENCES lessons(id),
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  lesson_id CHAR(36) NOT NULL,
   content TEXT NOT NULL,
-  grade NUMERIC,
-  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  file_url VARCHAR(1024),
+  grade DECIMAL(5, 2),
+  feedback TEXT,
+  submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  CONSTRAINT fk_submissions_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_submissions_lesson FOREIGN KEY (lesson_id) REFERENCES lessons(id)
+);
+
+CREATE TABLE IF NOT EXISTS payment_orders (
+  id CHAR(36) PRIMARY KEY,
+  user_id CHAR(36) NOT NULL,
+  course_id CHAR(36) NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  currency CHAR(3) NOT NULL,
+  provider_order_id VARCHAR(128) NOT NULL UNIQUE,
+  provider VARCHAR(32) NOT NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  paid_at TIMESTAMP NULL,
+  CONSTRAINT fk_payment_user FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_payment_course FOREIGN KEY (course_id) REFERENCES courses(id)
 );

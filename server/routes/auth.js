@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const {
   createUser, findUserByEmail, publicUser,
 } = require('../store');
+const { sendWelcomeEmail } = require('../services/emailService');
 const {
   authenticate, issueToken, revokeToken,
 } = require('../middleware/auth');
@@ -31,6 +32,7 @@ router.post('/register', async (req, res, next) => {
       name: req.body.name.trim(), email, role,
       passwordHash: await bcrypt.hash(req.body.password, 12),
     });
+    await sendWelcomeEmail(user);
     return res.status(201).json({ token: issueToken(user), user: publicUser(user) });
   } catch (error) {
     return next(error);
